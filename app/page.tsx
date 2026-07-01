@@ -1,199 +1,181 @@
 "use client";
+
 import React, { useState } from 'react';
 import { 
   Send, Bot, LayoutDashboard, MessageSquare, Phone, Settings, Zap, 
   Users, Paperclip, Globe, Mail, ShoppingCart, CheckCircle2, ChevronRight, X, 
-  Image as ImageIcon, Plus, ArrowRight, Activity, Database
+  Image as ImageIcon, Plus, ArrowRight, Activity, Database, Key
 } from 'lucide-react';
 
-export default function AgencyPro_SaaS() {
-  const [view, setView] = useState('clients'); // 'clients' | 'workspace' | 'admin'
+// COMPONENTE PRINCIPAL
+export default function AgencySaaS() {
+  const [view, setView] = useState('clients'); 
   const [clients, setClients] = useState([
-    { id: 1, name: 'Restaurante El Sol', status: 'Incompleto', modules: [] },
-    { id: 2, name: 'Barbería Lux', status: 'Activo', modules: ['whatsapp'] }
+    { id: 1, name: 'Restaurante El Sol', status: 'Activo', modules: ['whatsapp'] },
+    { id: 2, name: 'Clínica Dental Quito', status: 'Pendiente', modules: [] }
   ]);
   const [activeClient, setActiveClient] = useState(null);
-  const [activeModule, setActiveModule] = useState(null);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [messages, setMessages] = useState([]);
 
-  // FUNCIÓN PARA CREAR CLIENTE NUEVO DESDE CERO
-  const createNewClient = () => {
-    const name = prompt("Nombre del nuevo negocio:");
-    if (!name) return;
-    const newClient = { id: Date.now(), name, status: 'Nuevo', modules: [] };
-    setClients([...clients, newClient]);
-    openWorkspace(newClient);
+  // Crear cliente nuevo
+  const handleAddClient = () => {
+    const name = prompt("Nombre de la nueva empresa:");
+    if (name) {
+      const newClient = { id: Date.now(), name, status: 'Nuevo', modules: [] };
+      setClients([...clients, newClient]);
+    }
   };
 
-  const openWorkspace = (client) => {
+  // Entrar al espacio de trabajo de un cliente
+  const enterWorkspace = (client) => {
     setActiveClient(client);
     setView('workspace');
-    setMessages([{ role: 'ai', content: `Hola. Estoy listo para automatizar "${client.name}". ¿Qué canal quieres configurar primero?` }]);
-  };
-
-  const startModule = (module) => {
-    setActiveModule(module);
-    setChatOpen(true);
-    setMessages(prev => [...prev, { 
-      role: 'ai', 
-      content: `Iniciando configuración de ${module.toUpperCase()}. Por favor, sube los archivos necesarios (menús, precios, políticas) para que la IA aprenda.` 
-    }]);
+    setMessages([{ role: 'ai', content: `Estás en el taller de ${client.name}. ¿Qué canal configuramos hoy?` }]);
   };
 
   return (
-    <div className="flex h-screen bg-[#050505] text-white font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#09090b] text-white font-sans overflow-hidden">
       
-      {/* SIDEBAR MINIMALISTA */}
-      <aside className="w-20 lg:w-64 bg-[#0a0a0a] border-r border-white/5 flex flex-col items-center lg:items-start p-6">
-        <div className="flex items-center gap-3 mb-12 px-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/20">
-            <Zap size={18} className="text-white" />
+      {/* SIDEBAR */}
+      <aside className="w-20 lg:w-64 bg-[#121214] border-r border-[#27272a] flex flex-col p-6">
+        <div className="flex items-center gap-2 mb-10 px-2 cursor-pointer" onClick={() => setView('clients')}>
+          <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center">
+            <Zap size={14} className="text-black" />
           </div>
-          <span className="font-black text-xl tracking-tighter hidden lg:block uppercase">Studio IA</span>
+          <span className="font-bold tracking-tight text-lg hidden lg:block uppercase italic">Studio IA</span>
         </div>
-
-        <nav className="flex-1 w-full space-y-2">
-          <NavBtn icon={<Users size={20}/>} label="Clientes" active={view === 'clients'} onClick={() => setView('clients')} />
-          <NavBtn icon={<Activity size={20}/>} label="Métricas" />
-          <NavBtn icon={<Database size={20}/>} label="Base Datos" />
-          <div className="pt-8 opacity-20"><hr border-white/10 /></div>
-          <NavBtn icon={<Settings size={20}/>} label="Ajustes" />
+        
+        <nav className="flex-1 space-y-2">
+          <button onClick={() => setView('clients')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${view === 'clients' ? 'bg-[#27272a] text-white' : 'text-[#a1a1aa] hover:bg-white/5'}`}>
+            <Users size={18}/> <span className="text-xs font-bold uppercase hidden lg:block">Mis Clientes</span>
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[#a1a1aa] hover:bg-white/5 transition-all">
+            <Activity size={18}/> <span className="text-xs font-bold uppercase hidden lg:block">Estadísticas</span>
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[#a1a1aa] hover:bg-white/5 transition-all">
+            <Key size={18}/> <span className="text-xs font-bold uppercase hidden lg:block">Credenciales</span>
+          </button>
         </nav>
       </aside>
 
-      {/* ÁREA DE TRABAJO DINÁMICA */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        
-        {/* HEADER */}
-        <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-[#050505]/50 backdrop-blur-xl">
-          <div>
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest">
-              {view === 'clients' ? 'Directorio de Negocios' : `Workspace / ${activeClient?.name}`}
-            </h2>
-          </div>
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="flex-1 flex flex-col bg-[#09090b]">
+        <header className="h-16 border-b border-[#27272a] flex items-center justify-between px-8 bg-[#09090b]/50 backdrop-blur-xl">
+          <h2 className="text-sm font-bold tracking-widest uppercase text-gray-500">
+            {view === 'clients' ? 'Directorio de Negocios' : `Escritorio / ${activeClient?.name}`}
+          </h2>
           <button 
-            onClick={createNewClient}
-            className="bg-white text-black px-5 py-2 rounded-full text-xs font-black uppercase flex items-center gap-2 hover:bg-gray-200 transition-all"
+            onClick={handleAddClient}
+            className="bg-white text-black px-4 py-2 rounded-lg text-xs font-bold uppercase hover:bg-gray-200 transition-all flex items-center gap-2"
           >
-            <Plus size={16} /> Nuevo Cliente
+            <Plus size={14}/> Nuevo Negocio
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-10">
+        <div className="flex-1 overflow-y-auto p-8">
           
-          {/* VISTA 1: LISTA DE CLIENTES (INTUITIVA) */}
+          {/* VISTA 1: DIRECTORIO DE CLIENTES */}
           {view === 'clients' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {clients.map(client => (
-                <div key={client.id} className="group bg-[#0f0f0f] border border-white/5 p-8 rounded-[32px] hover:border-blue-500/50 transition-all cursor-pointer" onClick={() => openWorkspace(client)}>
+                <div 
+                  key={client.id} 
+                  onClick={() => enterWorkspace(client)}
+                  className="p-6 bg-[#121214] border border-[#27272a] rounded-[24px] hover:border-blue-500/50 transition-all cursor-pointer group"
+                >
                   <div className="flex justify-between items-start mb-6">
                     <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center font-bold text-xl">{client.name[0]}</div>
-                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase ${client.status === 'Activo' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${client.status === 'Activo' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
                       {client.status}
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{client.name}</h3>
-                  <div className="flex gap-2 mb-6">
-                    {client.modules.length > 0 ? client.modules.map(m => <div className="p-1 bg-white/5 rounded-md text-blue-400"><MessageSquare size={12}/></div>) : <span className="text-xs text-gray-600 italic">Sin automatizaciones</span>}
-                  </div>
-                  <button className="flex items-center gap-2 text-xs font-bold text-blue-500 group-hover:gap-4 transition-all uppercase tracking-widest">
-                    Entrar al Workspace <ArrowRight size={14} />
+                  <h3 className="text-lg font-bold mb-4">{client.name}</h3>
+                  <button className="flex items-center gap-2 text-[10px] font-bold text-blue-500 group-hover:gap-4 transition-all uppercase tracking-widest">
+                    Entrar al Taller <ArrowRight size={14} />
                   </button>
                 </div>
               ))}
             </div>
           )}
 
-          {/* VISTA 2: WORKSPACE DEL CLIENTE (TIPO n8n/DASHBOARD) */}
+          {/* VISTA 2: TALLER DEL CLIENTE */}
           {view === 'workspace' && (
-            <div className="space-y-10">
+            <div className="space-y-8 animate-in fade-in duration-500">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ModuleCard 
-                  title="WhatsApp Business" 
-                  icon={<MessageSquare size={24} className="text-green-500"/>} 
-                  desc="Automatiza chats, catálogos y ventas por WhatsApp."
-                  onClick={() => startModule('whatsapp')}
+                <ModuleBox 
+                  icon={<MessageSquare className="text-green-500"/>} 
+                  title="WhatsApp AI" 
+                  onClick={() => setIsChatOpen(true)}
                 />
-                <ModuleCard 
-                  title="Telefonía IA (Voz)" 
-                  icon={<Phone size={24} className="text-orange-500"/>} 
-                  desc="Agentes que atienden llamadas como humanos."
-                  onClick={() => startModule('voice')}
+                <ModuleBox 
+                  icon={<Phone className="text-orange-500"/>} 
+                  title="Telefonía IA" 
+                  onClick={() => setIsChatOpen(true)}
                 />
-                <ModuleCard 
-                  title="Instagram / FB Messenger" 
-                  icon={<Instagram size={24} className="text-pink-500"/>} 
-                  desc="Respuestas automáticas en DMs y comentarios."
-                  onClick={() => startModule('social')}
+                <ModuleBox 
+                  icon={<Mail className="text-blue-500"/>} 
+                  title="Gmail AI" 
+                  onClick={() => setIsChatOpen(true)}
                 />
               </div>
 
-              <div className="bg-[#0f0f0f] border border-white/5 rounded-[40px] p-10">
-                <h3 className="text-lg font-bold mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> Base de Conocimiento del Negocio</h3>
-                <div className="border-2 border-dashed border-white/5 rounded-3xl p-12 text-center hover:bg-white/[0.02] cursor-pointer transition-all">
-                   <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400"><Paperclip size={24}/></div>
-                   <p className="text-sm font-bold text-gray-400">Suelta aquí menús, PDFs, fotos de productos o audios del dueño.</p>
-                   <p className="text-[10px] text-gray-600 mt-2 uppercase tracking-widest">La IA aprenderá automáticamente de estos archivos.</p>
+              {/* BASE DE CONOCIMIENTO */}
+              <div className="p-8 bg-[#121214] border border-[#27272a] rounded-[32px]">
+                <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2"><Database size={16}/> Entrenamiento del Agente</h3>
+                <div className="border-2 border-dashed border-[#27272a] rounded-2xl p-10 text-center hover:bg-white/[0.02] transition-all cursor-pointer">
+                  <Paperclip size={32} className="mx-auto mb-4 text-gray-600"/>
+                  <p className="text-xs text-gray-500 font-medium">Sube menús, PDFs o fotos aquí para que la IA de este negocio aprenda.</p>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* CHAT DE AYUDA / CONFIGURACIÓN (SOLO CUANDO SE NECESITA) */}
-        {chatOpen && (
-          <div className="fixed bottom-10 right-10 w-[400px] h-[600px] bg-[#0f0f0f] border border-white/10 rounded-[40px] shadow-2xl flex flex-col overflow-hidden z-50">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"><Bot size={18}/></div>
-                <span className="text-xs font-bold uppercase tracking-wider">IA Onboarding</span>
-              </div>
-              <button onClick={() => setChatOpen(false)} className="p-2 hover:bg-white/10 rounded-full"><X size={18}/></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`p-4 rounded-2xl text-xs max-w-[85%] leading-relaxed ${m.role === 'user' ? 'bg-white text-black' : 'bg-[#1a1a1a] text-gray-400 border border-white/5'}`}>
-                    {m.content}
-                  </div>
+        {/* CHAT DE CONFIGURACIÓN */}
+        {isChatOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#09090b] w-full max-w-xl h-[550px] rounded-[32px] border border-[#27272a] flex flex-col overflow-hidden shadow-2xl">
+              <div className="p-6 border-b border-[#27272a] flex justify-between items-center bg-[#121214]">
+                <div className="flex items-center gap-3">
+                  <Bot size={20} className="text-blue-500" />
+                  <span className="font-bold text-sm uppercase tracking-wider">{activeClient?.name}</span>
                 </div>
-              ))}
-            </div>
-            <div className="p-6 bg-[#0a0a0a] flex gap-2">
-               <input 
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Escribe aquí..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs focus:outline-none"
-               />
-               <button className="p-3 bg-white text-black rounded-2xl hover:scale-105 transition-all"><Send size={18}/></button>
+                <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-white/5 rounded-full"><X size={20}/></button>
+              </div>
+              <div className="flex-1 p-6 overflow-y-auto space-y-4">
+                {messages.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`p-4 rounded-2xl text-xs max-w-[80%] ${m.role === 'user' ? 'bg-white text-black font-medium' : 'bg-[#18181b] border border-[#27272a] text-[#a1a1aa]'}`}>
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-6 bg-[#121214] border-t border-[#27272a] flex gap-2">
+                <input 
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Instrucciones para la IA..."
+                  className="flex-1 bg-[#09090b] border border-[#27272a] rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-1 focus:ring-white/20"
+                />
+                <button className="p-3 bg-white text-black rounded-xl hover:bg-gray-200 transition-all"><Send size={18} /></button>
+              </div>
             </div>
           </div>
         )}
-
       </main>
     </div>
   );
 }
 
-function NavBtn({ icon, label, active, onClick }) {
+function ModuleBox({ icon, title, onClick }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-      {icon}
-      <span className="text-xs font-bold uppercase tracking-widest hidden lg:block">{label}</span>
-    </button>
-  );
-}
-
-function ModuleCard({ title, icon, desc, onClick }) {
-  return (
-    <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[32px] hover:border-white/20 transition-all">
-      <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mb-6">{icon}</div>
-      <h3 className="text-lg font-bold mb-2">{title}</h3>
-      <p className="text-xs text-gray-500 leading-relaxed mb-6">{desc}</p>
-      <button onClick={onClick} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-white text-gray-400 hover:text-black transition-all">
+    <div className="p-6 bg-[#121214] border border-[#27272a] rounded-2xl hover:border-white/20 transition-all">
+      <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-4">{icon}</div>
+      <h3 className="text-sm font-bold mb-4">{title}</h3>
+      <button onClick={onClick} className="w-full py-2 bg-white/5 border border-[#27272a] rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-all">
         Configurar Canal
       </button>
     </div>
