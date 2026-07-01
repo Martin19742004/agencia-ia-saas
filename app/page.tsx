@@ -3,256 +3,229 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Send, Bot, LayoutDashboard, MessageSquare, Phone, Settings, Zap, 
-  Users, Paperclip, Globe, Mail, ShoppingCart, CheckCircle2, ChevronRight, X, 
-  Plus, ArrowRight, Activity, Database, Key, Lock, Trash2, RefreshCw, Layers, Instagram
+  Users, Paperclip, Mail, ShoppingCart, X, Plus, Activity, Database, Lock, Trash2, Instagram, Cpu, Globe
 } from 'lucide-react';
 
-export default function AutomationConsole() {
+export default function AgencyEngine() {
   const [view, setView] = useState('projects'); 
   const [projects, setProjects] = useState([]);
-  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [activeId, setActiveId] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const scrollRef = useRef(null);
+  const chatEndRef = useRef(null);
 
-  // --- PERSISTENCIA DE DATOS ---
+  // --- PERSISTENCIA REAL ---
   useEffect(() => {
-    const saved = localStorage.getItem('agency_v3_data');
+    const saved = localStorage.getItem('agency_pro_v4');
     if (saved) setProjects(JSON.parse(saved));
-    else setProjects([{ id: '1', name: 'Mi Primer Negocio', status: 'Nuevo', modules: {}, memory: [], logs: [] }]);
   }, []);
 
   useEffect(() => {
-    if (projects.length > 0) localStorage.setItem('agency_v3_data', JSON.stringify(projects));
+    localStorage.setItem('agency_pro_v4', JSON.stringify(projects));
   }, [projects]);
 
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [isChatOpen, isTyping, projects]);
+  const activeProject = projects.find(p => p.id === activeId);
 
-  const activeProject = projects.find(p => p.id === activeProjectId);
+  // --- CORRECCIÓN DEL BOTÓN DE ENVÍO ---
+  const handleAction = async () => {
+    if (!input.trim() || isTyping || !activeId) return;
 
-  // --- LÓGICA DE INTELIGENCIA REAL ---
-  const callOpenRouter = async (text) => {
-    const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_KEY;
-    if (!apiKey) return "Error: No has configurado la API Key en Vercel.";
+    const userText = input;
+    const userMsg = { role: 'user', content: userText, id: Date.now() };
+    
+    // Actualizar mensajes localmente
+    setProjects(prev => prev.map(p => 
+      p.id === activeId ? { ...p, messages: [...p.messages, userMsg] } : p
+    ));
+    setInput('');
+    setIsTyping(true);
 
+    // LLAMADA A IA REAL
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENROUTER_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
           "model": "meta-llama/llama-3-8b-instruct:free",
           "messages": [
-            { "role": "system", "content": `Eres el Ingeniero Jefe de una Agencia de Automatización. Cliente: ${activeProject?.name}. Ayuda al usuario a configurar WhatsApp, Instagram o Voz. Sé técnico pero directo.` },
-            { "role": "user", "content": text }
+            { "role": "system", "content": `Eres el Sistema Operativo de una Agencia de IA. Cliente: ${activeProject?.name}. Ayuda a automatizar WhatsApp, Voz o Email.` },
+            { "role": "user", "content": userText }
           ]
         })
       });
       const data = await response.json();
-      return data.choices[0].message.content;
+      const aiMsg = { role: 'ai', content: data.choices[0].message.content, id: Date.now() + 1 };
+      setProjects(prev => prev.map(p => p.id === activeId ? { ...p, messages: [...p.messages, aiMsg] } : p));
     } catch (e) {
-      return "Hubo un fallo en la conexión con el cerebro de IA.";
+      const errorMsg = { role: 'ai', content: "Error: Verifica tu API Key de OpenRouter en Vercel.", id: Date.now() + 1 };
+      setProjects(prev => prev.map(p => p.id === activeId ? { ...p, messages: [...p.messages, errorMsg] } : p));
+    } finally {
+      setIsTyping(false);
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
-  const handleSendMessage = async (e) => {
-    if (e) e.preventDefault();
-    if (!input.trim() || isTyping) return;
-
-    const userText = input;
-    const userMsg = { role: 'user', content: userText, time: new Date().toLocaleTimeString() };
-    
-    // Guardar mensaje del usuario
-    const updated = projects.map(p => p.id === activeProjectId ? { ...p, memory: [...(p.memory || []), userMsg] } : p);
-    setProjects(updated);
-    setInput('');
-    setIsTyping(true);
-
-    // Llamada a la IA
-    const aiResponse = await callOpenRouter(userText);
-    const aiMsg = { role: 'ai', content: aiResponse, time: new Date().toLocaleTimeString() };
-    
-    setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, memory: [...(p.memory || []), aiMsg] } : p));
-    setIsTyping(false);
-  };
-
-  // --- GESTIÓN DE PROYECTOS ---
-  const addNewProject = () => {
-    const name = prompt("Nombre del Negocio:");
+  const createProject = () => {
+    const name = prompt("Nombre del nuevo negocio:");
     if (!name) return;
-    const newP = { id: Date.now().toString(), name, status: 'Activo', modules: {}, memory: [], logs: [] };
-    setProjects([...projects, newP]);
-    setActiveProjectId(newP.id);
+    const newProj = { id: Date.now().toString(), name, messages: [], modules: {} };
+    setProjects([...projects, newProj]);
+    setActiveId(newProj.id);
     setView('workspace');
   };
 
   return (
-    <div className="flex h-screen bg-[#020202] text-[#f0f0f0] font-sans selection:bg-blue-500/30">
+    <div className="flex h-screen bg-[#000000] text-[#e0e0e0] font-sans selection:bg-blue-500/40">
       
-      {/* SIDEBAR TIPO n8n */}
-      <aside className="w-64 bg-[#080808] border-r border-white/5 flex flex-col z-50">
+      {/* SIDEBAR TIPO CONSOLA */}
+      <aside className="w-20 lg:w-64 bg-[#080808] border-r border-white/5 flex flex-col z-50">
         <div className="p-8 flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-            <Zap size={20} className="text-white fill-white" />
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30">
+            <Cpu size={22} className="text-white" />
           </div>
-          <span className="font-black text-lg tracking-tighter italic">STUDIO.IA</span>
+          <span className="font-black text-lg tracking-tighter hidden lg:block uppercase">Engine.IA</span>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1">
-          <NavTab icon={<Layers size={18}/>} label="Dashboard" active={view === 'projects'} onClick={() => setView('projects')} />
-          <NavTab icon={<Activity size={18}/>} label="Flujos Activos" />
-          <NavTab icon={<Database size={18}/>} label="Base de Datos" />
-          <div className="py-4 opacity-10"><hr border-white/10 /></div>
-          <NavTab icon={<Lock size={18} className="text-yellow-500"/>} label="Admin / Pagos" active={view === 'admin'} onClick={() => setView('admin')} />
+        <nav className="flex-1 px-4 space-y-2">
+          <SideItem icon={<LayoutDashboard size={18}/>} label="Proyectos" active={view === 'projects'} onClick={() => setView('projects')} />
+          <SideItem icon={<Activity size={18}/>} label="Nodos Activos" />
+          <div className="py-4"><hr className="border-white/5" /></div>
+          <SideItem icon={<Lock size={18} className="text-yellow-500"/>} label="Facturación" active={view === 'admin'} onClick={() => setView('admin')} />
         </nav>
 
         <div className="p-6 mt-auto">
-          <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-            <div className="text-[9px] font-bold text-gray-500 uppercase mb-2">Socio de Agencia</div>
-            <div className="text-[11px] font-bold">Martin Network 🇪🇨</div>
+          <div className="text-[9px] font-black text-gray-600 uppercase mb-4 tracking-[0.2em]">Partner Status</div>
+          <div className="flex items-center gap-2 text-green-500 text-[10px] font-bold">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div> CONECTADO
           </div>
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* ÁREA DE TRABAJO */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
         
-        {/* HEADER PRO */}
-        <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-[#020202]/80 backdrop-blur-2xl z-40">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">
-            {view === 'projects' ? 'Infraestructura Global' : `Configuración / ${activeProject?.name}`}
+        {/* HEADER */}
+        <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-[#000000]/50 backdrop-blur-xl z-40">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">
+            {view === 'projects' ? 'Infraestructura' : `Consola / ${activeProject?.name}`}
           </h2>
-          <button onClick={addNewProject} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2">
-            <Plus size={14}/> Nuevo Negocio
+          <button onClick={createProject} className="bg-white text-black px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all">
+            + Nuevo Negocio
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-12 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0a0a0a] to-[#000000]">
           
-          {/* PROYECTOS */}
+          {/* VISTA: LISTA DE NEGOCIOS */}
           {view === 'projects' && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+              {projects.length === 0 && (
+                <div className="col-span-full py-40 text-center border border-dashed border-white/5 rounded-[40px]">
+                  <Database size={40} className="mx-auto mb-4 text-gray-800" />
+                  <p className="text-sm font-bold text-gray-600 uppercase tracking-widest">No hay negocios registrados. Empieza creando uno arriba.</p>
+                </div>
+              )}
               {projects.map(p => (
-                <ProjectCard key={p.id} project={p} onOpen={() => { setActiveProjectId(p.id); setView('workspace'); }} onDelete={(e) => { e.stopPropagation(); setProjects(projects.filter(proj => proj.id !== p.id)); }} />
+                <div key={p.id} onClick={() => { setActiveId(p.id); setView('workspace'); }} className="group bg-[#080808] border border-white/5 p-8 rounded-[32px] hover:border-blue-500/40 transition-all cursor-pointer">
+                  <div className="flex justify-between items-start mb-10">
+                    <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center font-black text-xl text-blue-500 uppercase">{p.name[0]}</div>
+                    <button onClick={(e) => { e.stopPropagation(); setProjects(projects.filter(proj => proj.id !== p.id)); }} className="p-2 text-gray-800 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                  </div>
+                  <h3 className="text-xl font-bold tracking-tight mb-8">{p.name}</h3>
+                  <div className="flex items-center justify-between text-[9px] font-black uppercase text-blue-500 group-hover:gap-4 transition-all">
+                    Ingresar al Sistema <Plus size={14}/>
+                  </div>
+                </div>
               ))}
             </div>
           )}
 
-          {/* WORKSPACE DE INGENIERÍA */}
+          {/* VISTA: WORKSPACE (NODOS) */}
           {view === 'workspace' && activeProject && (
-            <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in duration-700">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatusNode title="WhatsApp API" status="Configurar" icon={<MessageSquare className="text-green-500"/>} onClick={() => setIsChatOpen(true)} />
-                <StatusNode title="Voice Assistant" status="Configurar" icon={<Phone className="text-orange-500"/>} onClick={() => setIsChatOpen(true)} />
-                <StatusNode title="Instagram DM" status="Configurar" icon={<Instagram className="text-pink-500"/>} onClick={() => setIsChatOpen(true)} />
+            <div className="max-w-4xl mx-auto space-y-12">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Node title="WhatsApp" icon={<MessageSquare className="text-green-500"/>} onOpen={() => setIsChatOpen(true)} />
+                <Node title="Voz IA" icon={<Phone className="text-orange-500"/>} onOpen={() => setIsChatOpen(true)} />
+                <Node title="Web Agent" icon={<Globe className="text-blue-500"/>} onOpen={() => setIsChatOpen(true)} />
               </div>
-
-              <div className="bg-[#080808] border border-white/5 rounded-[40px] p-12 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><Database size={120}/></div>
-                <h3 className="text-sm font-black uppercase tracking-widest mb-8 flex items-center gap-3"><RefreshCw size={18} className="text-blue-500"/> Entrenamiento Local</h3>
-                <div className="border-2 border-dashed border-white/10 rounded-[32px] p-20 flex flex-col items-center justify-center hover:border-blue-500/50 hover:bg-white/[0.01] transition-all cursor-pointer">
-                  <Paperclip size={40} className="text-gray-700 mb-6"/>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest text-center">Sube archivos PDF, JPG o Texto<br/>específicos para este negocio.</p>
-                </div>
+              <div className="bg-[#080808] border border-white/5 rounded-[40px] p-12 text-center">
+                 <Paperclip size={32} className="mx-auto mb-4 text-gray-700" />
+                 <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Base de Datos de Entrenamiento</h3>
+                 <p className="text-[10px] text-gray-700 mt-2">Sube archivos aquí para que la IA los procese para este cliente.</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* CHAT TIPO CURSOR / n8n (SUPER INTUITIVO) */}
+        {/* CHAT LATERAL DE INGENIERÍA */}
         {isChatOpen && activeProject && (
-          <div className="fixed inset-y-0 right-0 w-[500px] bg-[#080808] border-l border-white/10 shadow-2xl z-[100] flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-[#0a0a0a]">
+          <div className="fixed inset-y-0 right-0 w-full lg:w-[500px] bg-[#050505] border-l border-white/10 shadow-2xl z-[100] flex flex-col">
+            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-[#080808]">
               <div>
-                <h3 className="text-xs font-black uppercase tracking-widest text-blue-500">Agente de Configuración</h3>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter mt-1">Negocio: {activeProject.name}</p>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Configurador IA</h3>
+                <p className="text-xs font-bold mt-1 uppercase tracking-tighter">{activeProject.name}</p>
               </div>
-              <button onClick={() => setIsChatOpen(false)} className="p-3 hover:bg-white/5 rounded-full transition-colors text-gray-500"><X size={20}/></button>
+              <button onClick={() => setIsChatOpen(false)} className="p-3 hover:bg-white/5 rounded-full"><X size={20}/></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar" ref={scrollRef}>
-              {activeProject.memory.length === 0 && (
-                <div className="text-center py-20">
-                  <Bot size={40} className="mx-auto mb-4 text-gray-800 opacity-50" />
-                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Escribe algo para empezar a automatizar...</p>
+            <div className="flex-1 overflow-y-auto p-8 space-y-6">
+              {activeProject.messages.length === 0 && (
+                <div className="text-center py-20 text-gray-700">
+                  <Bot size={40} className="mx-auto mb-4 opacity-20" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Esperando instrucciones...</p>
                 </div>
               )}
-              {activeProject.memory.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`p-5 rounded-[24px] text-xs max-w-[90%] leading-relaxed ${m.role === 'user' ? 'bg-blue-600 text-white font-medium ml-12' : 'bg-white/5 border border-white/5 text-gray-300 mr-12'}`}>
+              {activeProject.messages.map((m) => (
+                <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`p-5 rounded-2xl text-xs max-w-[85%] leading-relaxed ${m.role === 'user' ? 'bg-blue-600 text-white font-medium' : 'bg-white/5 border border-white/5 text-gray-300'}`}>
                     {m.content}
-                    <div className={`text-[8px] mt-2 opacity-40 font-bold ${m.role === 'user' ? 'text-right' : 'text-left'}`}>{m.time}</div>
                   </div>
                 </div>
               ))}
-              {isTyping && <div className="flex gap-2 p-4 bg-white/5 w-fit rounded-full ml-4 animate-pulse"><div className="w-1 h-1 bg-gray-500 rounded-full"></div><div className="w-1 h-1 bg-gray-500 rounded-full"></div><div className="w-1 h-1 bg-gray-500 rounded-full"></div></div>}
+              {isTyping && <div className="text-[10px] font-black text-blue-500 animate-pulse tracking-widest">PROCESANDO...</div>}
+              <div ref={chatEndRef} />
             </div>
 
-            <form onSubmit={handleSendMessage} className="p-8 bg-[#0a0a0a] border-t border-white/5 flex items-center gap-4">
+            <div className="p-8 bg-[#080808] border-t border-white/5 flex gap-4">
               <input 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ej: Automatiza mis respuestas de WhatsApp..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-xs focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all"
+                onKeyDown={(e) => e.key === 'Enter' && handleAction()}
+                placeholder="Escribe aquí..."
+                className="flex-1 bg-[#000000] border border-white/10 rounded-xl px-6 py-4 text-xs focus:ring-1 focus:ring-blue-600 outline-none"
               />
-              <button type="submit" className="w-12 h-12 bg-white text-black rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all">
-                <Send size={18} />
+              <button 
+                onClick={handleAction}
+                className="w-14 h-14 bg-white text-black rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-white/5"
+              >
+                <Send size={20} />
               </button>
-            </form>
+            </div>
           </div>
         )}
       </main>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
-      `}</style>
     </div>
   );
 }
 
-// --- COMPONENTES AUXILIARES ---
-function NavTab({ icon, label, active, onClick }) {
+function SideItem({ icon, label, active, onClick }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${active ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-      {icon}
-      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+    <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${active ? 'bg-white text-black shadow-lg shadow-white/10' : 'text-gray-600 hover:text-white hover:bg-white/5'}`}>
+      {icon} <span className="text-[10px] font-black uppercase tracking-widest hidden lg:block">{label}</span>
     </button>
   );
 }
 
-function ProjectCard({ project, onOpen, onDelete }) {
+function Node({ title, icon, onOpen }) {
   return (
-    <div onClick={onOpen} className="group bg-[#080808] border border-white/5 p-8 rounded-[32px] hover:border-blue-600/50 transition-all cursor-pointer relative overflow-hidden">
-       <div className="flex justify-between items-start mb-10">
-          <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center font-black text-xl text-blue-500 group-hover:scale-110 transition-transform">{project.name[0]}</div>
-          <button onClick={onDelete} className="p-2 text-gray-700 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
-       </div>
-       <h3 className="text-xl font-bold mb-2 tracking-tighter">{project.name}</h3>
-       <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">ID: {project.id}</p>
-       <div className="mt-8 flex items-center justify-between">
-          <div className="flex -space-x-2">
-             <div className="w-6 h-6 rounded-full border border-[#020202] bg-green-500/20"></div>
-             <div className="w-6 h-6 rounded-full border border-[#020202] bg-blue-500/20"></div>
-          </div>
-          <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest group-hover:mr-2 transition-all">Abrir Entorno →</span>
-       </div>
-    </div>
-  );
-}
-
-function StatusNode({ title, status, icon, onClick }) {
-  return (
-    <div onClick={onClick} className="bg-[#080808] border border-white/5 p-6 rounded-3xl hover:bg-white/[0.02] cursor-pointer transition-all">
-      <div className="mb-4">{icon}</div>
-      <div className="text-[11px] font-black uppercase tracking-widest mb-1">{title}</div>
-      <div className="text-[9px] font-bold text-blue-500 uppercase tracking-tighter">{status}</div>
+    <div onClick={onOpen} className="bg-[#080808] border border-white/5 p-8 rounded-3xl hover:border-white/20 cursor-pointer transition-all">
+       <div className="mb-6">{icon}</div>
+       <div className="text-xs font-black uppercase tracking-widest">{title}</div>
+       <div className="mt-2 text-[9px] font-bold text-gray-600 uppercase">Estado: Pendiente</div>
     </div>
   );
 }
